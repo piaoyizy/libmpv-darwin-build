@@ -1,6 +1,13 @@
 name: ci
 
 on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Nix flake target to build
+        required: true
+        default: mk-out-archive-xcframeworks-macos-universal-video-default
+        type: string
   push:
     branches:
       - main
@@ -67,8 +74,9 @@ jobs:
         env:
           XCODE_PATH: ${{ steps.xcode_path.outputs.xcode_path }}
           VERSION: ${{ steps.version.outputs.version }}
+          TARGET: ${{ inputs.target }}
         run: |
-          nix develop -c make XCODE_PATH=${XCODE_PATH} VERSION=${VERSION}
+          nix develop -c make XCODE_PATH=${XCODE_PATH} VERSION=${VERSION} TARGET=${TARGET}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
