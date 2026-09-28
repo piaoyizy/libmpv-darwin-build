@@ -34,6 +34,11 @@
     url = "https://github.com/libass/libass/releases/download/0.17.1/libass-0.17.1.tar.xz";
     sha256 = "f0da0bbfba476c16ae3e1cfd862256d30915911f7abaa1b16ce62ee653192784";
   };
+  libarchive = {
+    version = "3.7.7";
+    url = "https://github.com/libarchive/libarchive/releases/download/v3.7.7/libarchive-3.7.7.tar.xz";
+    sha256 = "879acd83c3399c7caaee73fe5f7418e06087ab2aaf40af3e99b9e29beb29faee";
+  };
   libogg = {
     version = "1.3.5";
     url = "https://github.com/xiph/ogg/releases/download/v1.3.5/libogg-1.3.5.tar.gz";

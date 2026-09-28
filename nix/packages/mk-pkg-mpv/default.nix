@@ -26,6 +26,7 @@ let
   ffmpeg = callPackage ../mk-pkg-ffmpeg/default.nix { };
   uchardet = callPackage ../mk-pkg-uchardet/default.nix { };
   libass = callPackage ../mk-pkg-libass/default.nix { };
+  libarchiveSystem = callPackage ../mk-pkg-libarchive-system/default.nix { };
 
   nativeBuildInputs = [
     pkgs.meson
@@ -75,6 +76,9 @@ pkgs.stdenvNoCC.mkDerivation {
     ++ pkgs.lib.optionals (variant == "video") [
       uchardet
       libass
+    ]
+    ++ pkgs.lib.optionals (os == oses.macos && variant == variants.video) [
+      libarchiveSystem
     ];
   configurePhase = ''
     DISABLE_ALL_OPTIONS=(
@@ -220,6 +224,9 @@ pkgs.stdenvNoCC.mkDerivation {
     )
 
     MACOS_VIDEO_OPTIONS=(
+      `# misc features`
+      -Dlibarchive=enabled `# ISO/archive support through macOS system libarchive`
+
       `# video output features`
       -Dgl-cocoa=enabled `# gl-cocoa`
 
