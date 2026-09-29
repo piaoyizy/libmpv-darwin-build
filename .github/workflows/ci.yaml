@@ -89,6 +89,7 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           PLATFORM: ${{ inputs.target }}
         run: |
+          mkdir -p artifacts
           case "${PLATFORM:-all}" in
             all)   TARGETS=(macos ios) ;;
             macos) TARGETS=(macos) ;;
@@ -99,6 +100,7 @@ jobs:
           for PLATFORM_NAME in "${TARGETS[@]}"; do
             TARGET="mk-out-archive-xcframeworks-${PLATFORM_NAME}-universal-video-default"
             nix develop -c make XCODE_PATH="${XCODE_PATH}" VERSION="${VERSION}" TARGET="${TARGET}"
+            cp -L result/*.tar.gz result/*.zip artifacts/
           done
 
       - name: Upload artifacts
@@ -106,8 +108,8 @@ jobs:
         with:
           if-no-files-found: error
           path: |
-            result/*.tar.gz
-            result/*.zip
+            artifacts/*.tar.gz
+            artifacts/*.zip
 
       - name: Release
         uses: softprops/action-gh-release@v3
@@ -115,5 +117,5 @@ jobs:
         with:
           fail_on_unmatched_files: true
           files: |
-            result/*.tar.gz
-            result/*.zip
+            artifacts/*.tar.gz
+            artifacts/*.zip
