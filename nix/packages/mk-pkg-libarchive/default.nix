@@ -52,9 +52,15 @@ pkgs.stdenvNoCC.mkDerivation {
   installPhase = ''
     mkdir -p $out/include $out/lib/pkgconfig
 
+    generated_archive_header="$(find build/subprojects/libarchive -type f -name archive.h -print -quit)"
+    static_archive="$(find build/subprojects/libarchive -type f \( -name libarchive.a -o -name libarchive_static.a \) -print -quit)"
+    if [ -z "$generated_archive_header" ] || [ -z "$static_archive" ]; then
+      echo "generated libarchive headers or static library were not found" >&2
+      exit 1
+    fi
     cp $src/subprojects/libarchive/libarchive/archive_entry.h $out/include/
-    cp build/subprojects/libarchive/libarchive/archive.h $out/include/
-    cp build/subprojects/libarchive/libarchive/libarchive.a $out/lib/
+    cp "$generated_archive_header" $out/include/archive.h
+    cp "$static_archive" $out/lib/libarchive.a
 
     printf '%s\n' \
       'prefix='"$out" \
