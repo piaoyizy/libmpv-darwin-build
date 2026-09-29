@@ -10,9 +10,10 @@ elif cpu == 'arm64'
 endif
 
 options = cmake.subproject_options()
+apple_sysroot = meson.get_cross_property('cmake_osx_sysroot')
 options.add_cmake_defines({
     'CMAKE_OSX_ARCHITECTURES': arch,
-    'CMAKE_OSX_SYSROOT': meson.get_cross_property('cmake_osx_sysroot'),
+    'CMAKE_OSX_SYSROOT': apple_sysroot,
     'CMAKE_POSITION_INDEPENDENT_CODE': true,
     'CMAKE_C_COMPILER_WORKS': true,
     'BUILD_SHARED_LIBS': false,
@@ -42,5 +43,19 @@ options.add_cmake_defines({
     'ENABLE_XATTR': false,
     'ENABLE_ICONV': false,
 })
+
+# CMake cannot infer iOS reliably from Meson's generic Darwin host machine.
+# Without this, its feature checks omit the iOS target mode and even basic
+# types such as pid_t appear to be unavailable.
+if apple_sysroot.contains('iPhone')
+    ios_deployment_target = '9.0'
+    if apple_sysroot.contains('iPhoneSimulator') and arch == 'arm64'
+        ios_deployment_target = '12.0'
+    endif
+    options.add_cmake_defines({
+        'CMAKE_SYSTEM_NAME': 'iOS',
+        'CMAKE_OSX_DEPLOYMENT_TARGET': ios_deployment_target,
+    })
+endif
 
 cmake.subproject('libarchive', options: options)
