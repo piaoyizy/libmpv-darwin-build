@@ -14,7 +14,6 @@ options.add_cmake_defines({
     'CMAKE_OSX_ARCHITECTURES': arch,
     'CMAKE_OSX_SYSROOT': meson.get_cross_property('cmake_osx_sysroot'),
     'CMAKE_POSITION_INDEPENDENT_CODE': true,
-    'CMAKE_TRY_COMPILE_TARGET_TYPE': 'STATIC_LIBRARY',
     'CMAKE_C_COMPILER_WORKS': true,
     'BUILD_SHARED_LIBS': false,
     'ENABLE_INSTALL': false,
