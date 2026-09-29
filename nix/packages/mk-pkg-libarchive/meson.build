@@ -36,6 +36,7 @@ options.add_cmake_defines({
     'ENABLE_PCREPOSIX': false,
     'ENABLE_PCRE2POSIX': false,
     'ENABLE_LIBGCC': false,
+    'POSIX_REGEX_LIB': 'NONE',
     'ENABLE_CNG': false,
     'ENABLE_ACL': false,
     'ENABLE_XATTR': false,
