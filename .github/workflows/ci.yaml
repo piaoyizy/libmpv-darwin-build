@@ -9,10 +9,14 @@ on:
         default: v0.7.2-catpaw.1
         type: string
       target:
-        description: Nix flake target to build
+        description: Apple platform artifact(s) to build
         required: true
-        default: mk-out-archive-xcframeworks-macos-universal-video-default
-        type: string
+        default: all
+        type: choice
+        options:
+          - all
+          - macos
+          - ios
   push:
     branches:
       - main
@@ -72,6 +76,8 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/}"
           elif [[ -n "${{ inputs.version }}" ]]; then
             VERSION="${{ inputs.version }}"
+          else
+            VERSION="v0.7.2-catpaw.1"
           fi
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
@@ -81,9 +87,19 @@ jobs:
         env:
           XCODE_PATH: ${{ steps.xcode_path.outputs.xcode_path }}
           VERSION: ${{ steps.version.outputs.version }}
-          TARGET: ${{ inputs.target }}
+          PLATFORM: ${{ inputs.target }}
         run: |
-          nix develop -c make XCODE_PATH=${XCODE_PATH} VERSION=${VERSION} TARGET=${TARGET}
+          case "${PLATFORM:-all}" in
+            all)   TARGETS=(macos ios) ;;
+            macos) TARGETS=(macos) ;;
+            ios)   TARGETS=(ios) ;;
+            *) echo "Unsupported platform: ${PLATFORM}" >&2; exit 2 ;;
+          esac
+
+          for PLATFORM_NAME in "${TARGETS[@]}"; do
+            TARGET="mk-out-archive-xcframeworks-${PLATFORM_NAME}-universal-video-default"
+            nix develop -c make XCODE_PATH="${XCODE_PATH}" VERSION="${VERSION}" TARGET="${TARGET}"
+          done
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
