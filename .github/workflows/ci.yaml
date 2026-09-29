@@ -3,6 +3,11 @@ name: ci
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: Artifact version used in generated filenames
+        required: true
+        default: v0.7.2-catpaw.1
+        type: string
       target:
         description: Nix flake target to build
         required: true
@@ -65,6 +70,8 @@ jobs:
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             VERSION="${GITHUB_REF#refs/tags/}"
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
           fi
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
