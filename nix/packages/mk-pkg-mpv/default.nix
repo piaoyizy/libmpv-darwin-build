@@ -28,6 +28,7 @@ let
   libass = callPackage ../mk-pkg-libass/default.nix { };
   libarchive = callPackage ../mk-pkg-libarchive/default.nix { };
   libplacebo = callPackage ../mk-pkg-libplacebo/default.nix { };
+  vulkanHeaders = callPackage ../mk-pkg-vulkan-headers/default.nix { };
 
   nativeBuildInputs = [
     pkgs.meson
@@ -69,7 +70,7 @@ pkgs.stdenvNoCC.mkDerivation {
   enableParallelBuilding = true;
   inherit nativeBuildInputs;
   buildInputs =
-    [ ffmpeg libass libplacebo ]
+    [ ffmpeg libass libplacebo vulkanHeaders ]
     ++ pkgs.lib.optionals (variant == "video") [
       uchardet
       libarchive

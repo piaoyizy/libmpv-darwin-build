@@ -12,6 +12,7 @@ let
   callPackage = pkgs.lib.callPackageWith { inherit pkgs os arch; };
   nativeFile = callPackage ../../utils/native-file/default.nix { };
   crossFile = callPackage ../../utils/cross-file/default.nix { };
+  vulkanHeaders = callPackage ../mk-pkg-vulkan-headers/default.nix { };
   pname = import ../../utils/name/package.nix name;
   src = callPackage ../../utils/fetch-tarball/default.nix {
     name = "${pname}-source-${version}";
@@ -30,18 +31,17 @@ pkgs.stdenvNoCC.mkDerivation {
     pkgs.meson
     pkgs.ninja
     pkgs.pkg-config
-    # libplacebo runs tools/glsl_preproc during the build; that script imports
-    # jinja2 to generate the C shader sources.  A bare Python interpreter makes
-    # Meson configure successfully but fails as soon as Ninja runs the first
-    # shader-generation job.
-    (pkgs.python3.withPackages (ps: [ ps.jinja2 ]))
+    pkgs.python3
+  ];
+  buildInputs = [
+    vulkanHeaders
   ];
   configurePhase = ''
     meson setup build $src \
       --native-file ${nativeFile} \
       --cross-file ${crossFile} \
       --prefix=$out \
-      -Dvulkan=disabled \
+      -Dvulkan=enabled \
       -Dvk-proc-addr=disabled \
       -Dopengl=disabled \
       -Dgl-proc-addr=disabled \
@@ -59,6 +59,10 @@ pkgs.stdenvNoCC.mkDerivation {
       -Dfuzz=false
   '';
   buildPhase = ''
+    # Meson executes the interpreter recorded in its native file, rather than
+    # the Python wrapper from PATH.  Make libplacebo's generator dependency
+    # visible to that exact interpreter.
+    export PYTHONPATH=${pkgs.python3Packages.makePythonPath [ pkgs.python3Packages.jinja2 ]}
     meson compile -vC build
   '';
   installPhase = ''

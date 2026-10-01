@@ -30,7 +30,7 @@ pkgs.stdenvNoCC.mkDerivation {
     # install pkg-config file so that consumers (e.g. libplacebo) can find
     # the Vulkan headers via `dependency('vulkan')`
     mkdir -p $out/lib/pkgconfig
-    cat > $out/lib/pkgconfig/vulkan.pc <<'EOF'
+    cat > $out/lib/pkgconfig/vulkan.pc <<EOF
 Name: vulkan
 Description: Vulkan Loader and headers
 Version: ${version}
