@@ -41,6 +41,8 @@ pkgs.stdenvNoCC.mkDerivation {
     # libplacebo's OpenGL backend generates its GL loader (glad) at configure
     # time.  The generator dependency runs under the interpreter recorded in the
     # native file, so it must be reachable via PYTHONPATH here (not just at build).
+    export CPPFLAGS="-I${pkgs.fast-float}/include $CPPFLAGS"
+    export CXXFLAGS="-I${pkgs.fast-float}/include $CXXFLAGS"
     export PYTHONPATH=${pkgs.python3Packages.makePythonPath [ pkgs.python3Packages.glad2 ]}
     meson setup build $src \
       --native-file ${nativeFile} \
