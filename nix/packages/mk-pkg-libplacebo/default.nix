@@ -12,8 +12,6 @@ let
   callPackage = pkgs.lib.callPackageWith { inherit pkgs os arch; };
   nativeFile = callPackage ../../utils/native-file/default.nix { };
   crossFile = callPackage ../../utils/cross-file/default.nix { };
-  vulkanHeaders = callPackage ../mk-pkg-vulkan-headers/default.nix { };
-
   pname = import ../../utils/name/package.nix name;
   src = callPackage ../../utils/fetch-tarball/default.nix {
     name = "${pname}-source-${version}";
@@ -34,15 +32,12 @@ pkgs.stdenvNoCC.mkDerivation {
     pkgs.pkg-config
     pkgs.python3
   ];
-  buildInputs = [
-    vulkanHeaders
-  ];
   configurePhase = ''
     meson setup build $src \
       --native-file ${nativeFile} \
       --cross-file ${crossFile} \
       --prefix=$out \
-      -Dvulkan=enabled \
+      -Dvulkan=disabled \
       -Dvk-proc-addr=disabled \
       -Dopengl=disabled \
       -Dgl-proc-addr=disabled \
