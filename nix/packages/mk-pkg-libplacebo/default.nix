@@ -57,6 +57,7 @@ pkgs.stdenvNoCC.mkDerivation {
       -Ddovi=disabled \
       -Dlibdovi=disabled \
       -Dunwind=disabled \
+      -Dfast_float=disabled \
       -Ddemos=false \
       -Dtests=false \
       -Dbench=false \
