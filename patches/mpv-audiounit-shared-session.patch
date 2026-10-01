@@ -2,11 +2,12 @@ diff --git a/audio/out/ao_audiounit.m b/audio/out/ao_audiounit.m
 index f9fe4e7..6f2c3a1 100644
 --- a/audio/out/ao_audiounit.m
 +++ b/audio/out/ao_audiounit.m
-@@ -24,6 +24,8 @@
+@@ -23,7 +23,9 @@
+ #include "common/msg.h"
  #include "ao_coreaudio_utils.h"
  #include "ao_coreaudio_chmap.h"
- 
 +#include <pthread.h>
+ 
 +
  #import <AudioUnit/AudioUnit.h>
  #import <CoreAudio/CoreAudioTypes.h>
@@ -25,7 +26,8 @@ index f9fe4e7..6f2c3a1 100644
  static OSStatus au_get_ary(AudioUnit unit, AudioUnitPropertyID inID, AudioUnitScope inScope, AudioUnitElement inElement, void **data, UInt32 *outDataSize)
  {
      OSStatus err;
-@@ -84,7 +89,60 @@
+@@ -83,6 +90,61 @@
+ }
  
  
 +static void acquire_audio_session(struct ao *ao, bool exclusive, NSInteger pref_channels)
@@ -86,35 +88,35 @@ index f9fe4e7..6f2c3a1 100644
  static OSStatus render_cb_lpcm(void *ctx, AudioUnitRenderActionFlags *aflags,
                                const AudioTimeStamp *ts, UInt32 bus,
                                UInt32 frames, AudioBufferList *buffer_list)
-@@ -116,11 +173,7 @@
- MP_VERBOSE(ao, "max channels: %ld, requested: %d\n", maxChannels, (int)ao->channels.num);
+@@ -115,15 +177,9 @@
+ 
+     MP_VERBOSE(ao, "max channels: %ld, requested: %d\n", maxChannels, (int)ao->channels.num);
  
 -    AVAudioSessionCategoryOptions options = 0;
 -    if (!(ao->init_flags & AO_INIT_EXCLUSIVE)) {
 -        options |= AVAudioSessionCategoryOptionMixWithOthers;
 -    }
--
++    if (!p->skip_session_management)
++        acquire_audio_session(ao, (ao->init_flags & AO_INIT_EXCLUSIVE) != 0, prefChannels);
+ 
 -    [instance setCategory:AVAudioSessionCategoryPlayback withOptions:options error:nil];
 -    [instance setMode:AVAudioSessionModeMoviePlayback error:nil];
 -    [instance setActive:YES error:nil];
 -    [instance setPreferredOutputNumberOfChannels:prefChannels error:nil];
-+    if (!p->skip_session_management)
-+        acquire_audio_session(ao, (ao->init_flags & AO_INIT_EXCLUSIVE) != 0, prefChannels);
  
      AudioComponentDescription desc = (AudioComponentDescription) {
-@@ -207,6 +210,8 @@
- coreaudio_error_audiounit:
-     AudioUnitUninitialize(p->audio_unit);
+         .componentType         = kAudioUnitType_Output,
+@@ -206,6 +262,9 @@
  coreaudio_error_component:
      AudioComponentInstanceDispose(p->audio_unit);
  coreaudio_error:
 +    if (!p->skip_session_management)
 +        release_audio_session(ao);
++
      talloc_free(layout);
      return false;
  }
-@@ -230,10 +239,8 @@
-     AudioOutputUnitStop(p->audio_unit);
+@@ -235,10 +294,9 @@
      AudioUnitUninitialize(p->audio_unit);
      AudioComponentInstanceDispose(p->audio_unit);
  
@@ -122,12 +124,13 @@ index f9fe4e7..6f2c3a1 100644
 -        setActive:NO
 -        withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation
 -        error:nil];
++
 +    if (!p->skip_session_management)
 +        release_audio_session(ao);
  }
  
  static int init(struct ao *ao)
-@@ -263,4 +272,9 @@
+@@ -262,4 +320,9 @@
      .reset          = stop,
      .start          = start,
      .priv_size      = sizeof(struct priv),
