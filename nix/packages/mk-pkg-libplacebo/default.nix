@@ -30,7 +30,11 @@ pkgs.stdenvNoCC.mkDerivation {
     pkgs.meson
     pkgs.ninja
     pkgs.pkg-config
-    pkgs.python3
+    # libplacebo runs tools/glsl_preproc during the build; that script imports
+    # jinja2 to generate the C shader sources.  A bare Python interpreter makes
+    # Meson configure successfully but fails as soon as Ninja runs the first
+    # shader-generation job.
+    (pkgs.python3.withPackages (ps: [ ps.jinja2 ]))
   ];
   configurePhase = ''
     meson setup build $src \
