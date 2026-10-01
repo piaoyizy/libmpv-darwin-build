@@ -31,14 +31,10 @@ pkgs.stdenvNoCC.mkDerivation {
     # the Vulkan headers via `dependency('vulkan')`
     mkdir -p $out/lib/pkgconfig
     cat > $out/lib/pkgconfig/vulkan.pc <<'EOF'
-prefix=$out
-exec_prefix=\${prefix}
-includedir=\${prefix}/include
-
 Name: vulkan
 Description: Vulkan Loader and headers
 Version: ${version}
-Cflags: -I\${includedir}
+Cflags: -I$out/include
 EOF
   '';
 }
