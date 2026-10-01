@@ -148,7 +148,6 @@ audio_default_options = [
     '--enable-protocol=ffrtmphttp',
     '--enable-protocol=file',
     '--enable-protocol=ftp',
-    '--enable-protocol=hls',
     '--enable-protocol=http',
     '--enable-protocol=httpproxy',
     '--enable-protocol=https',
