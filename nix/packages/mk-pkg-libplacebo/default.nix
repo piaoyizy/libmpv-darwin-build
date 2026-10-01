@@ -34,6 +34,7 @@ pkgs.stdenvNoCC.mkDerivation {
     pkgs.python3
   ];
   buildInputs = [
+    pkgs.fast-float
     vulkanHeaders
   ];
   configurePhase = ''
@@ -57,7 +58,6 @@ pkgs.stdenvNoCC.mkDerivation {
       -Ddovi=disabled \
       -Dlibdovi=disabled \
       -Dunwind=disabled \
-      -Dfast_float=disabled \
       -Ddemos=false \
       -Dtests=false \
       -Dbench=false \
