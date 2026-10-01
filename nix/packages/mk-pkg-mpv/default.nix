@@ -50,9 +50,6 @@ let
 
     cd $src
     patch -p1 <${../../../patches/mpv-audiounit-shared-session.patch}
-    if [ "${variant}" == "${variants.audio}" ]; then
-      patch -p1 <${../../../patches/mpv-remove-libass.patch}
-    fi
     cd -
 
     cp -r $src $out
@@ -73,10 +70,9 @@ pkgs.stdenvNoCC.mkDerivation {
   enableParallelBuilding = true;
   inherit nativeBuildInputs;
   buildInputs =
-    [ ffmpeg libplacebo vulkanHeaders ]
+    [ ffmpeg libass libplacebo vulkanHeaders ]
     ++ pkgs.lib.optionals (variant == "video") [
       uchardet
-      libass
       libarchive
     ];
   configurePhase = ''
