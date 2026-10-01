@@ -37,6 +37,10 @@ pkgs.stdenvNoCC.mkDerivation {
     vulkanHeaders
   ];
   configurePhase = ''
+    # libplacebo's OpenGL backend generates its GL loader (glad) at configure
+    # time.  The generator dependency runs under the interpreter recorded in the
+    # native file, so it must be reachable via PYTHONPATH here (not just at build).
+    export PYTHONPATH=${pkgs.python3Packages.makePythonPath [ pkgs.python3Packages.glad2 ]}
     meson setup build $src \
       --native-file ${nativeFile} \
       --cross-file ${crossFile} \
@@ -60,9 +64,9 @@ pkgs.stdenvNoCC.mkDerivation {
   '';
   buildPhase = ''
     # Meson executes the interpreter recorded in its native file, rather than
-    # the Python wrapper from PATH.  Make libplacebo's generator dependency
-    # visible to that exact interpreter.
-    export PYTHONPATH=${pkgs.python3Packages.makePythonPath [ pkgs.python3Packages.jinja2 ]}
+    # the Python wrapper from PATH.  Make libplacebo's generator dependencies
+    # (glad for the GL loader, jinja2 for shader generation) visible to it.
+    export PYTHONPATH=${pkgs.python3Packages.makePythonPath [ pkgs.python3Packages.glad2 pkgs.python3Packages.jinja2 ]}
     meson compile -vC build
   '';
   installPhase = ''
