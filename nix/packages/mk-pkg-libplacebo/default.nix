@@ -41,9 +41,9 @@ pkgs.stdenvNoCC.mkDerivation {
       --native-file ${nativeFile} \
       --cross-file ${crossFile} \
       --prefix=$out \
-      -Dvulkan=enabled \
+      -Dvulkan=disabled \
       -Dvk-proc-addr=disabled \
-      -Dopengl=disabled \
+      -Dopengl=enabled \
       -Dgl-proc-addr=disabled \
       -Dd3d11=disabled \
       -Dlcms=disabled \
