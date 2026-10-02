@@ -5,6 +5,45 @@ set -u # treat unset variables as an error
 
 # see: MobileVLCKit cocoapods
 
+repair_ios_coremedia_dependency() {
+  local binary="$1" dependency nm_output symbols invalid
+  local coremedia='/System/Library/Frameworks/CoreMedia.framework/CoreMedia'
+  for dependency in '@rpath/SwiftCoreMedia.framework/SwiftCoreMedia' \
+    '@rpath/libswiftCoreMedia.dylib' '/usr/lib/swift/libswiftCoreMedia.dylib'; do
+    otool -L "$binary" | grep -Fq "$dependency" || continue
+    nm_output="$("${CATPAW_NM:-/usr/bin/nm}" -m -u "$binary")" || return 1
+    symbols="$(printf '%s\n' "$nm_output" | awk '
+      /\(from (libswiftCoreMedia|SwiftCoreMedia)\)/ {
+        for (i = 1; i <= NF; i++) if ($i ~ /^_/) print $i
+      }
+    ')"
+    # Retarget only C APIs. Real Swift overlay imports must keep their own
+    # library; changing a mixed dependency requires relinking the source.
+    if [[ -z "$symbols" ]]; then
+      # An unused overlay load command has no C symbols to retarget.
+      if [[ "$dependency" == '@rpath/SwiftCoreMedia.framework/SwiftCoreMedia' ]]; then
+        install_name_tool -change "$dependency" '@rpath/libswiftCoreMedia.dylib' "$binary" || return 1
+      fi
+      continue
+    fi
+    invalid="$(printf '%s\n' "$symbols" | grep -Ev '^_(CM|kCM)' || true)"
+    if [[ -n "$invalid" ]]; then
+      if ! printf '%s\n' "$symbols" | grep -Eq '^_(CM|kCM)'; then
+        # Genuine Swift imports (including FORCE_LOAD) keep the overlay.
+        if [[ "$dependency" == '@rpath/SwiftCoreMedia.framework/SwiftCoreMedia' ]]; then
+          install_name_tool -change "$dependency" '@rpath/libswiftCoreMedia.dylib' "$binary" || return 1
+        fi
+        continue
+      fi
+      echo "不能整体改写混合 Swift/CoreMedia 依赖：$binary" >&2
+      printf '%s\n' "$invalid" >&2
+      return 1
+    fi
+    install_name_tool -change "$dependency" "$coremedia" "$binary" || return 1
+    echo "    已修正 CoreMedia C API 依赖：$binary"
+  done
+}
+
 find ${DEPS} -name "*.dylib" -type f | while read DYLIB; do
     echo "${DYLIB}"
 
@@ -51,6 +90,8 @@ find ${DEPS} -name "*.dylib" -type f | while read DYLIB; do
     # replace DYLIB var
     DYLIB="${FRAMEWORK_DIR}/${FRAMEWORK_NAME}"
 
+    repair_ios_coremedia_dependency "$DYLIB"
+
     # update dylib id
     NEW_ID="@rpath/${FRAMEWORK_NAME}.framework/${FRAMEWORK_NAME}"
     install_name_tool \
@@ -64,6 +105,15 @@ find ${DEPS} -name "*.dylib" -type f | while read DYLIB; do
         tail -n +2 |
         grep "@rpath" |
         while read DEP; do
+            # Swift runtime/overlay dylibs are supplied by iOS or Xcode's
+            # Swift embedding step, not by this framework bundle. Converting
+            # libswiftCoreMedia.dylib to SwiftCoreMedia.framework makes dyld
+            # fail before the application can launch.
+            case "$DEP" in
+                @rpath/libswift*.dylib|@rpath/*.framework/*) continue ;;
+                @rpath/lib*.dylib) ;;
+                *) continue ;;
+            esac
             DEP_NAME=$(basename $DEP .dylib | sed 's/\.[0-9]*$//' | sed 's/^lib//')
             DEP_NAME="$(tr '[:lower:]' '[:upper:]' <<<${DEP_NAME:0:1})${DEP_NAME:1}"
 

@@ -41,7 +41,19 @@ pkgs.stdenvNoCC.mkDerivation {
   enableParallelBuilding = true;
   inherit nativeBuildInputs;
   configurePhase = ''
-    meson setup build $src \
+    cp -r $src source
+    chmod -R u+w source
+    python3 - <<'PY'
+import re
+from pathlib import Path
+
+path = Path("source/src/OT/glyf/VarCompositeGlyph.hh")
+text = path.read_text()
+path.write_text(text.replace("sincosf (", "__sincosf ("))
+if re.search(r"(?<!_)sincosf\s*\(", path.read_text()):
+    raise SystemExit("HarfBuzz sincosf call replacement did not complete")
+PY
+    meson setup build source \
       --native-file ${nativeFile} \
       --cross-file ${crossFile} \
       --prefix=$out \

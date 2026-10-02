@@ -72,6 +72,7 @@ pkgs.stdenvNoCC.mkDerivation {
     mkdir build
 
     export DEPS=${libs}
+    export CATPAW_NM=${pkgs.darwin.xcode}/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/nm
     export OUTPUT_DIR=$PWD/build
 
     export MPV_HEADERS_PATH=${mpvHeaders}

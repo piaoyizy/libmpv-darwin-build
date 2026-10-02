@@ -23,6 +23,7 @@ let
   nativeFile = callPackage ../../utils/native-file/default.nix { };
   crossFile = callPackage ../../utils/cross-file/default.nix { };
   xctoolchainLipo = callPackage ../../utils/xctoolchain/lipo.nix { };
+  xctoolchainSwiftc = callPackage ../../utils/xctoolchain/swiftc.nix { };
   ffmpeg = callPackage ../mk-pkg-ffmpeg/default.nix { };
   uchardet = callPackage ../mk-pkg-uchardet/default.nix { };
   libass = callPackage ../mk-pkg-libass/default.nix { };
@@ -36,6 +37,7 @@ let
     pkgs.pkg-config
     pkgs.python3
     xctoolchainLipo
+    xctoolchainSwiftc
   ];
 
   pname = import ../../utils/name/package.nix name;
@@ -50,6 +52,21 @@ let
 
     cd $src
     patch -p1 <${../../../patches/mpv-audiounit-shared-session.patch}
+    if [ "${os}" == "${oses.ios}" ] || [ "${os}" == "${oses.iossimulator}" ]; then
+      sed -i '/setAudioOutputDeviceUniqueID:/d' audio/out/ao_avfoundation.m
+      sed -i 's/HAVE_COREAUDIO || HAVE_AVFOUNDATION/HAVE_COREAUDIO/g' audio/out/ao_coreaudio_utils.h
+      sed -i '/bool ca_init_chmap(struct ao \*ao, AudioDeviceID device);/d; /void ca_get_active_chmap(struct ao \*ao, AudioDeviceID device, int channel_count,/,+1d' audio/out/ao_coreaudio_chmap.h
+      sed -i 's/#if HAVE_COREAUDIO || HAVE_AVFOUNDATION/#if HAVE_COREAUDIO/g' audio/out/ao_coreaudio_utils.c
+      sed -i "/^if features\['avfoundation'\]$/,/^endif$/ { /ao_coreaudio_properties.c/d; }" meson.build
+      sed -i '/static AudioChannelLayout\* ca_query_layout/i #if HAVE_COREAUDIO' audio/out/ao_coreaudio_chmap.c
+      sed -i '$i #endif' audio/out/ao_coreaudio_chmap.c
+      # ios-gl uses CV* functions and EAGLContext even when the Vulkan
+      # VideoToolbox backend is disabled. Link their defining frameworks.
+      sed -i "/^if features\['ios-gl'\]$/a\\    dependencies += dependency('appleframeworks', modules: ['CoreVideo', 'OpenGLES'])" meson.build
+      # AudioUnit manages AVAudioSession even with the avfoundation output
+      # driver disabled. Keep its system framework dependency independent.
+      sed -i "s/modules: \['Foundation', 'AudioToolbox'\]/modules: ['Foundation', 'AudioToolbox', 'AVFoundation']/" meson.build
+    fi
     cd -
 
     cp -r $src $out
@@ -83,7 +100,6 @@ pkgs.stdenvNoCC.mkDerivation {
       -Dlibmpv=false `# libmpv library`
       -Dbuild-date=false `# whether to include binary compile time`
       -Dtests=false `# unit tests (development only)`
-      -Dta-leak-report=false `# enable ta leak report by default (development only)`
 
       `# misc features`
       -Dcdda=disabled `# cdda support (libcdio)`
@@ -99,8 +115,6 @@ pkgs.stdenvNoCC.mkDerivation {
       -Dlua=disabled `# Lua`
       -Dpthread-debug=disabled `# pthread runtime debugging wrappers`
       -Drubberband=disabled `# librubberband support`
-      -Dsdl2=disabled `# SDL2`
-      -Dsdl2-gamepad=disabled `# SDL2 gamepad input`
       -Duchardet=disabled `# uchardet support`
       -Duwp=disabled `# Universal Windows Platform`
       -Dvapoursynth=disabled `# VapourSynth filter bridge`
@@ -119,7 +133,6 @@ pkgs.stdenvNoCC.mkDerivation {
       -Doss-audio=disabled `# OSSv4 audio output`
       -Dpipewire=disabled `# PipeWire audio output`
       -Dpulse=disabled `# PulseAudio audio output`
-      -Dsdl2-audio=disabled `# SDL2 audio output`
       -Dsndio=disabled `# sndio audio output`
       -Dwasapi=disabled `# WASAPI audio output`
 
@@ -144,7 +157,6 @@ pkgs.stdenvNoCC.mkDerivation {
       -Dgl-win32=disabled `# OpenGL Win32 Backend`
       -Dgl-x11=disabled `# OpenGL X11/GLX (deprecated/legacy)`
       -Djpeg=disabled `# JPEG support`
-      -Dsdl2-video=disabled `# SDL2 video output`
       -Dshaderc=disabled `# libshaderc SPIR-V compiler`
       -Dsixel=disabled `# Sixel`
       -Dspirv-cross=disabled `# SPIRV-Cross SPIR-V shader converter`
@@ -178,8 +190,6 @@ pkgs.stdenvNoCC.mkDerivation {
       -Dmacos-cocoa-cb=disabled `# macOS libmpv backend`
       -Dmacos-media-player=disabled `# macOS Media Player support`
       -Dmacos-touchbar=disabled `# macOS Touch Bar support`
-      -Dswift-build=disabled `# macOS Swift build tools`
-      -Dswift-flags= `# Optional Swift compiler flags`
 
       `# manpages`
       -Dhtml-build=disabled `# html manual generation`
@@ -211,6 +221,10 @@ pkgs.stdenvNoCC.mkDerivation {
       `# audio output features`
       -Dcoreaudio=enabled `# CoreAudio audio output`
 
+      `# macOS Swift build tools`
+      -Dswift-build=enabled
+      -Dswift-flags="-sdk ${pkgs.darwin.xcode}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"
+
       `# video output features`
       -Dcocoa=enabled `# Cocoa` `# BUG: required in audio mode since v0.36.0`
     )
@@ -226,6 +240,8 @@ pkgs.stdenvNoCC.mkDerivation {
     IOS_OPTIONS=(
       `# audio output features`
       -Daudiounit=enabled `# AudioUnit output for iOS`
+      -Davfoundation=disabled `# desktop device enumeration is unavailable on iOS`
+      -Db_lundef=true `# reject unresolved symbols during linking`
     )
 
     IOS_VIDEO_OPTIONS=(
@@ -245,7 +261,7 @@ pkgs.stdenvNoCC.mkDerivation {
       if [ "${variant}" == "${variants.video}" ]; then
         OPTIONS+=("''${MACOS_VIDEO_OPTIONS[@]}")
       fi
-    elif [ "${os}" == "${oses.ios}" ]; then
+    elif [ "${os}" == "${oses.ios}" ] || [ "${os}" == "${oses.iossimulator}" ]; then
       OPTIONS+=("''${IOS_OPTIONS[@]}")
       if [ "${variant}" == "${variants.video}" ]; then
         OPTIONS+=("''${IOS_VIDEO_OPTIONS[@]}")

@@ -39,6 +39,11 @@ let
         unzip ${libpngPatch} -d libpng-patch
         rsync -a libpng-patch/libpng-*/ $src/
 
+        # macOS 新 SDK 已移除 <fp.h>，将其在 TARGET_OS_MAC 分支下的引用
+        # 替换为 <math.h>，避免编译 libpng 时报 "fp.h file not found"，
+        # 同时保证 floor 等数学函数声明可用
+        sed -i 's/^#      include <fp.h>$/#      include <math.h>/' $src/pngpriv.h
+
         cp -r $src $out
       '';
 in

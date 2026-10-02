@@ -65,6 +65,12 @@ find ${DEPS} -name "*.dylib" -type f | while read DYLIB; do
         tail -n +2 |
         grep "@rpath" |
         while read DEP; do
+            # System Swift dylibs are not bundled third-party frameworks.
+            case "$DEP" in
+                @rpath/libswift*.dylib|@rpath/*.framework/*) continue ;;
+                @rpath/lib*.dylib) ;;
+                *) continue ;;
+            esac
             DEP_NAME=$(basename $DEP .dylib | sed 's/\.[0-9]*$//' | sed 's/^lib//')
             DEP_NAME="$(tr '[:lower:]' '[:upper:]' <<<${DEP_NAME:0:1})${DEP_NAME:1}"
 

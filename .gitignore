@@ -1,2 +1,6 @@
 /.direnv
 /result
+
+/build/
+/.DS_Store
+/nix/packages/mk-pkg-mpv/default.nix.bak

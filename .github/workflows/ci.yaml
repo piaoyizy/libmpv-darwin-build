@@ -6,7 +6,7 @@ on:
       version:
         description: Artifact version used in generated filenames
         required: true
-        default: v0.7.2-catpaw.1
+        default: mpv041-ffmpeg901-r1
         type: string
       target:
         description: Apple platform artifact(s) to build
@@ -29,8 +29,9 @@ on:
 jobs:
   ci:
     name: ci
-    # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md
-    runs-on: macos-15
+    # https://github.com/actions/runner-images/blob/main/images/macos/macos-26-arm64-Readme.md
+    runs-on: macos-26
+    timeout-minutes: 360
     permissions:
       contents: write
     steps:
@@ -63,9 +64,10 @@ jobs:
       - name: Xcode path
         id: xcode_path
         run: |
-          XCODE_PATH=$(realpath /Applications/Xcode_16.1.0.app)
+          XCODE_PATH=$(realpath /Applications/Xcode_26.6.app)
+          echo "DEVELOPER_DIR=${XCODE_PATH}/Contents/Developer" >> "$GITHUB_ENV"
 
-          ${XCODE_PATH}/Contents/Developer/usr/bin/xcodebuild -version
+          "${XCODE_PATH}/Contents/Developer/usr/bin/xcodebuild" -version
 
           echo "xcode_path=${XCODE_PATH}" >> $GITHUB_OUTPUT
 
@@ -77,7 +79,7 @@ jobs:
           elif [[ -n "${{ inputs.version }}" ]]; then
             VERSION="${{ inputs.version }}"
           else
-            VERSION="v0.7.2-catpaw.1"
+            VERSION="mpv041-ffmpeg901-r1"
           fi
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
@@ -100,6 +102,7 @@ jobs:
           for PLATFORM_NAME in "${TARGETS[@]}"; do
             TARGET="mk-out-archive-xcframeworks-${PLATFORM_NAME}-universal-video-default"
             nix develop -c make XCODE_PATH="${XCODE_PATH}" VERSION="${VERSION}" TARGET="${TARGET}"
+            python3 tools/audit_xcframeworks.py result/*.tar.gz
             cp -L result/*.tar.gz result/*.zip artifacts/
           done
 

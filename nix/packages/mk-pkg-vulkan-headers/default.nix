@@ -24,8 +24,10 @@ pkgs.stdenvNoCC.mkDerivation {
   inherit src;
   dontUnpack = true;
   installPhase = ''
-    mkdir -p $out/include/vulkan
-    cp $src/include/vulkan/*.h $out/include/vulkan/
+    mkdir -p $out/include
+    # 复制整个 include 目录树（含 vulkan 与平级的 vk_video 子目录），
+    # 否则 vulkan_core.h 引用的 vk_video/*.h 缺失，导致下游编译失败
+    cp -r $src/include/* $out/include/
 
     # install pkg-config file so that consumers (e.g. libplacebo) can find
     # the Vulkan headers via `dependency('vulkan')`
@@ -36,5 +38,11 @@ Description: Vulkan Loader and headers
 Version: ${version}
 Cflags: -I$out/include
 EOF
+
+    # install Vulkan registry (vk.xml) so that libplacebo 的
+    # utils_gen.py 能在默认 datadir 下找到它（否则报
+    # "Could not find the vulkan registry (vk.xml)"）
+    mkdir -p $out/share/vulkan/registry
+    cp $src/registry/vk.xml $out/share/vulkan/registry/
   '';
 }
