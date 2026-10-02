@@ -6,7 +6,7 @@ on:
       version:
         description: Artifact version used in generated filenames
         required: true
-        default: mpv041-ffmpeg901-r1
+        default: mpv041-ffmpeg902-r1
         type: string
       target:
         description: Apple platform artifact(s) to build
@@ -20,6 +20,7 @@ on:
   push:
     branches:
       - main
+      - codex/upgrade-ffmpeg9-mpv041
     tags:
       - "*"
   pull_request:
@@ -79,7 +80,7 @@ jobs:
           elif [[ -n "${{ inputs.version }}" ]]; then
             VERSION="${{ inputs.version }}"
           else
-            VERSION="mpv041-ffmpeg901-r1"
+            VERSION="mpv041-ffmpeg902-r1"
           fi
 
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
